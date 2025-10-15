@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import './App.css' // Importaremos los estilos específicos más abajo
+import './App.css'
 
-// Hook personalizado para usar localStorage
+// (El hook useLocalStorage no cambia, lo omito por brevedad pero debe estar aquí)
 function useLocalStorage(key, initialValue) {
   const [storedValue, setStoredValue] = useState(() => {
     try {
@@ -27,28 +27,67 @@ function useLocalStorage(key, initialValue) {
   return [storedValue, setValue];
 }
 
-function App() {
-  // Estado principal de las tareas, sincronizado con localStorage
-  const [tasks, setTasks] = useLocalStorage('tasks', []);
-  // Estado para el texto del nuevo input
-  const [newTaskText, setNewTaskText] = useState('');
 
-  // Manejador para añadir una nueva tarea
+function App() {
+  const [tasks, setTasks] = useLocalStorage('tasks', []);
+  const [newTaskText, setNewTaskText] = useState('');
+  
+  // --- NUEVO: ESTADO PARA PERMISO DE NOTIFICACIONES ---
+  const [notificationPermission, setNotificationPermission] = useState('default');
+
+  // Al cargar la app, revisamos el permiso actual
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  // --- NUEVO: FUNCIÓN PARA SOLICITAR PERMISO ---
+  const handleRequestNotificationPermission = () => {
+    if (!('Notification' in window)) {
+      alert('Este navegador no soporta notificaciones de escritorio.');
+      return;
+    }
+    
+    Notification.requestPermission().then((permission) => {
+      setNotificationPermission(permission);
+    });
+  };
+  
+  // --- NUEVO: FUNCIÓN PARA MOSTRAR UNA NOTIFICACIÓN ---
+  const showNotification = (title, body) => {
+    // Solo mostramos si el permiso fue concedido
+    if (notificationPermission === 'granted') {
+      // Usamos el Service Worker para mostrar la notificación (mejor práctica para PWA)
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification(title, {
+          body: body,
+          icon: '/icons/icon-192x192.png', // Opcional: un icono para la notificación
+          badge: '/icons/icon-192x192.png', // Opcional: un icono para Android
+          vibrate: [200, 100, 200], // Opcional: patrón de vibración
+        });
+      });
+    }
+  };
+
+  // Manejador para añadir una nueva tarea (actualizado)
   const handleAddTask = (e) => {
-    e.preventDefault(); // Evita que el formulario recargue la página
-    if (newTaskText.trim() === '') return; // No añadir tareas vacías
+    e.preventDefault();
+    if (newTaskText.trim() === '') return;
 
     const newTask = {
-      id: Date.now(), // ID único basado en la fecha
+      id: Date.now(),
       text: newTaskText,
       completed: false,
     };
 
-    setTasks([newTask, ...tasks]); // Añade la nueva tarea al inicio de la lista
-    setNewTaskText(''); // Limpia el input
+    setTasks([newTask, ...tasks]);
+    setNewTaskText('');
+
+    // --- NUEVO: MOSTRAR NOTIFICACIÓN AL AÑADIR TAREA ---
+    showNotification('¡Tarea Agregada!', `"${newTask.text}" se añadió a tu lista.`);
   };
 
-  // Manejador para marcar una tarea como completada/incompleta
   const handleToggleTask = (id) => {
     setTasks(
       tasks.map((task) =>
@@ -57,9 +96,7 @@ function App() {
     );
   };
 
-  // Manejador para eliminar una tarea
   const handleDeleteTask = (id) => {
-    // Pide confirmación
     if (window.confirm('¿Seguro que quieres eliminar esta tarea?')) {
       setTasks(tasks.filter((task) => task.id !== id));
     }
@@ -70,9 +107,19 @@ function App() {
       <header className="app-header">
         <h1>Mis Tareas 📋</h1>
         <p>Simple, rápido y offline.</p>
+        
+        {/* --- NUEVO: BOTÓN PARA ACTIVAR NOTIFICACIONES --- */}
+        {/* Solo se muestra si aún no se ha concedido el permiso */}
+        {notificationPermission === 'default' && (
+          <button 
+            className="notification-button"
+            onClick={handleRequestNotificationPermission}
+          >
+            Activar Notificaciones 🔔
+          </button>
+        )}
       </header>
 
-      {/* Formulario para añadir tareas */}
       <form className="add-task-form" onSubmit={handleAddTask}>
         <input
           type="text"
@@ -83,7 +130,6 @@ function App() {
         <button type="submit">Añadir</button>
       </form>
 
-      {/* Lista de tareas */}
       <div className="task-list">
         {tasks.length === 0 ? (
           <p className="empty-state">¡No hay tareas pendientes! 🎉</p>
@@ -113,4 +159,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

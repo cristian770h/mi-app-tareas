@@ -107,3 +107,22 @@
 .delete-button:hover {
   background-color: #fbeeee;
 }
+
+/* ... (todos tus estilos anteriores) ... */
+
+/* --- NUEVOS ESTILOS PARA EL BOTÓN DE NOTIFICACIONES --- */
+.notification-button {
+  background-color: var(--color-secundario); /* Verde */
+  color: white;
+  font-weight: bold;
+  margin-top: 1rem;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.notification-button:hover {
+  background-color: #27ae60; /* Verde más oscuro */
+}
